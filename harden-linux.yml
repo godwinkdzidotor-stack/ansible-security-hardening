@@ -1,0 +1,51 @@
+---
+- name: Apply baseline Linux security hardening
+  hosts: linux_servers
+  become: yes
+
+  tasks:
+    - name: Ensure system packages are up to date
+      ansible.builtin.package:
+        name: "*"
+        state: latest
+      tags: patching
+
+    - name: Ensure UFW is installed (Ubuntu)
+      ansible.builtin.package:
+        name: ufw
+        state: present
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Enable UFW and allow SSH
+      community.general.ufw:
+        state: enabled
+        rule: allow
+        port: "{{ harden_ssh_port }}"
+        proto: tcp
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Disable root login over SSH
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin no'
+        create: no
+        backup: yes
+      when: disable_root_ssh
+      notify: restart ssh
+      tags: ssh
+
+    - name: Enforce password retry limit
+      ansible.builtin.lineinfile:
+        path: /etc/pam.d/common-auth
+        regexp: '^auth .* pam_tally2.so'
+        line: 'auth required pam_tally2.so onerr=fail deny=5 unlock_time=900'
+        insertafter: '^auth'
+      when: enforce_password_policy
+      tags: auth
+
+  handlers:
+    - name: restart ssh
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
