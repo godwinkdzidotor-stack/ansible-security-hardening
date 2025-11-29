@@ -1,0 +1,5 @@
+---
+harden_ssh_port: 22
+disable_root_ssh: true
+allow_ssh_from: "0.0.0.0/0"
+enforce_password_policy: true
