@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ansible Security Hardening | Dr. Dzidotor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description"
+        content="Linux security hardening with Ansible by Dr. Godwin K. Dzidotor – SSH lockdown, firewall rules, and baseline OS security." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --bg:#020617;
+      --accent:#b45309;
+      --accent-soft:rgba(180,83,9,.25);
+      --text-main:#e5e7eb;
+      --text-muted:#9ca3af;
+      --border-subtle:#1e293b;
+      --radius-xl:26px;
+      --shadow-soft:0 18px 48px rgba(15,23,42,.85);
+      --transition:.24s ease-out;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:"Inter",system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:radial-gradient(circle at top,#020617 0,#020617 40%,#000 100%);
+      color:var(--text-main);min-height:100vh;display:flex;justify-content:center;
+      padding:24px 12px 40px;
+    }
+    .shell{
+      width:100%;max-width:1100px;background:linear-gradient(135deg,#020617 0,#020617 60%,#020617 100%);
+      border-radius:32px;border:1px solid rgba(148,163,184,.18);box-shadow:var(--shadow-soft);
+      overflow:hidden;position:relative;
+    }
+    .shell::before{
+      content:"";position:absolute;inset:-1px;border-radius:inherit;
+      background:
+        radial-gradient(circle at top left,rgba(248,153,74,.32),transparent 60%),
+        radial-gradient(circle at bottom right,rgba(120,53,15,.3),transparent 60%);
+      mix-blend-mode:screen;pointer-events:none;
+    }
+    .inner{position:relative;z-index:1;padding:20px 22px 24px}
+    @media(min-width:900px){.inner{padding:24px 28px 28px}}
+    .top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:18px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .avatar{
+      width:40px;height:40px;border-radius:999px;
+      background:radial-gradient(circle at 30% 0,#f97316,#020617);
+      border:1px solid rgba(248,153,74,.8);
+      display:flex;align-items:center;justify-content:center;
+      font-weight:700;font-size:18px;color:#fffbeb;
+      box-shadow:0 12px 30px rgba(154,52,18,.6);
+    }
+    .brand-text h1{font-size:16px;letter-spacing:.04em;text-transform:uppercase}
+    .brand-text span{font-size:12px;color:var(--text-muted)}
+    .chip{
+      padding:6px 11px;border-radius:999px;background:rgba(15,23,42,.9);
+      border:1px solid rgba(148,163,184,.6);font-size:11px;color:var(--text-muted);
+      display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+    }
+    .chip-dot{
+      width:7px;height:7px;border-radius:999px;background:#22c55e;
+      box-shadow:0 0 0 4px rgba(34,197,94,.25);
+    }
+    .hero{
+      border-radius:var(--radius-xl);
+      background:
+        radial-gradient(circle at top left,var(--accent-soft),transparent 65%),
+        radial-gradient(circle at bottom right,rgba(15,23,42,.9),#020617 75%);
+      border:1px solid rgba(148,163,184,.3);padding:18px;display:grid;
+      grid-template-columns:1.4fr 1fr;gap:18px;margin-bottom:20px;
+    }
+    @media(max-width:800px){.hero{grid-template-columns:1fr}}
+    .hero-main h2{font-size:22px;margin-bottom:6px}
+    .hero-main p{font-size:13px;color:var(--text-muted);max-width:470px}
+    .hero-badges{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
+    .pill{
+      font-size:11px;padding:5px 9px;border-radius:999px;
+      background:rgba(15,23,42,.95);border:1px solid rgba(148,163,184,.55);
+    }
+    .hero-side{
+      background:rgba(15,23,42,.96);border-radius:18px;
+      border:1px solid rgba(55,65,81,.9);padding:10px 12px 12px;
+      font-size:12px;display:grid;gap:8px;
+    }
+    .badge-row{display:flex;flex-wrap:wrap;gap:6px}
+    .badge{
+      font-size:11px;padding:3px 8px;border-radius:999px;
+      background:rgba(15,23,42,.96);border:1px solid rgba(148,163,184,.9);color:var(--text-muted);
+    }
+    .tabs{margin-top:8px}
+    .tab-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+    .tab-btn{
+      padding:6px 10px;border-radius:999px;background:rgba(15,23,42,.95);
+      border:1px solid rgba(31,41,55,.9);color:var(--text-muted);font-size:12px;
+      display:inline-flex;align-items:center;gap:6px;cursor:pointer;transition:all var(--transition);
+    }
+    .tab-btn span{font-size:15px}
+    .tab-btn.active{
+      background:linear-gradient(135deg,#b45309,#f97316);border-color:transparent;
+      color:#020617;box-shadow:0 10px 30px rgba(180,83,9,.55);transform:translateY(-1px);
+    }
+    .tab-panels{
+      border-radius:18px;border:1px solid var(--border-subtle);
+      background:radial-gradient(circle at top left,rgba(15,23,42,.98),#020617 70%);
+      padding:14px 14px 16px;
+    }
+    .tab-panel{display:none;font-size:13px;color:var(--text-muted)}
+    .tab-panel.active{display:block}
+    .grid{display:grid;gap:12px}
+    @media(min-width:760px){.grid.cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .card{
+      border-radius:16px;background:rgba(15,23,42,.98);
+      border:1px solid rgba(55,65,81,.95);padding:10px 12px 12px;
+      box-shadow:0 12px 32px rgba(15,23,42,.85);
+    }
+    .card-header{
+      display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:6px;
+    }
+    .card-title{font-size:13px;font-weight:600}
+    .card-tag{
+      font-size:11px;padding:3px 8px;border-radius:999px;
+      background:rgba(24,24,27,.96);border:1px solid rgba(148,163,184,.9);
+    }
+    .card-body ul{margin-top:6px;padding-left:16px;display:grid;gap:4px}
+    .card-foot{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;font-size:11px}
+    .foot-pill{
+      padding:3px 8px;border-radius:999px;
+      background:rgba(15,23,42,.96);border:1px solid rgba(55,65,81,.95);color:var(--text-muted);
+    }
+    a.link{color:#f97316;text-decoration:none;font-size:12px}
+    a.link:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="inner">
+      <header class="top">
+        <div class="brand">
+          <div class="avatar">GD</div>
+          <div class="brand-text">
+            <h1>Dr. Godwin K. Dzidotor</h1>
+            <span>Cybersecurity · Linux Hardening · Automation</span>
+          </div>
+        </div>
+        <div class="chip">
+          <span class="chip-dot"></span>
+          Ansible Security Hardening · Linux Baselines
+        </div>
+      </header>
+
+      <section class="hero">
+        <div class="hero-main">
+          <h2>Ansible Playbooks for Linux Security Hardening</h2>
+          <p>
+            Opinionated hardening playbooks that lock down SSH, enforce firewall
+            rules, tune password policy, and remove unnecessary services – built
+            for repeatable, auditable server baselines.
+          </p>
+          <div class="hero-badges">
+            <span class="pill">SSH Lockdown</span>
+            <span class="pill">Firewall Baseline</span>
+            <span class="pill">Password & PAM Policy</span>
+            <span class="pill">Service Hardening</span>
+          </div>
+        </div>
+        <aside class="hero-side">
+          <div>
+            <strong>Repository</strong><br />
+            <a class="link" href="https://github.com/godwinkdzidotor-stack/ansible-security-hardening" target="_blank">
+              github.com/godwinkdzidotor-stack/ansible-security-hardening
+            </a>
+          </div>
+          <div class="badge-row">
+            <span class="badge">Ansible</span>
+            <span class="badge">Linux</span>
+            <span class="badge">CIS-Inspired</span>
+          </div>
+        </aside>
+      </section>
+
+      <section class="tabs">
+        <nav class="tab-nav">
+          <button class="tab-btn active" data-tab="controls">
+            <span>🛡️</span> Hardening Controls
+          </button>
+          <button class="tab-btn" data-tab="structure">
+            <span>📂</span> Playbook Structure
+          </button>
+          <button class="tab-btn" data-tab="run">
+            <span>▶️</span> How to Run
+          </button>
+        </nav>
+
+        <div class="tab-panels">
+          <article id="controls" class="tab-panel active">
+            <div class="grid cols-2">
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">SSH & Remote Access</div>
+                  <div class="card-tag">Access Control</div>
+                </div>
+                <div class="card-body">
+                  <ul>
+                    <li>Disable root login over SSH.</li>
+                    <li>Force key-based authentication where appropriate.</li>
+                    <li>Tune SSH configuration for stronger ciphers and MACs.</li>
+                  </ul>
+                </div>
+                <div class="card-foot">
+                  <span class="foot-pill">ssh_config</span>
+                  <span class="foot-pill">Least Privilege</span>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">Firewall & Services</div>
+                  <div class="card-tag">Network Exposure</div>
+                </div>
+                <div class="card-body">
+                  <ul>
+                    <li>Baseline inbound/outbound rules with host firewall.</li>
+                    <li>Stop and disable unnecessary network services.</li>
+                    <li>Document open ports and justifications.</li>
+                  </ul>
+                </div>
+                <div class="card-foot">
+                  <span class="foot-pill">FirewallD / UFW / iptables</span>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <div class="card-title">Password & Account Policy</div>
+                  <div class="card-tag">Identity</div>
+                </div>
+                <div class="card-body">
+                  <ul>
+                    <li>Configure password complexity and aging.</li>
+                    <li>Use PAM to limit failed login attempts.</li>
+                    <li>Harden default account and lockout behaviors.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article id="structure" class="tab-panel">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Playbook Layout</div>
+                <div class="card-tag">Best Practices</div>
+              </div>
+              <div class="card-body">
+                <ul style="margin-left:16px;display:grid;gap:4px;">
+                  <li>Roles segmented by concern (ssh, firewall, accounts, packages).</li>
+                  <li>Variables stored separately for easy tuning by environment.</li>
+                  <li>Idempotent tasks to support repeated runs safely.</li>
+                </ul>
+                <p style="margin-top:8px;">
+                  Browse the structure:
+                  <a class="link" href="https://github.com/godwinkdzidotor-stack/ansible-security-hardening" target="_blank">
+                    github.com/godwinkdzidotor-stack/ansible-security-hardening
+                  </a>
+                </p>
+              </div>
+            </div>
+          </article>
+
+          <article id="run" class="tab-panel">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title">Running the Playbooks</div>
+                <div class="card-tag">Usage</div>
+              </div>
+              <div class="card-body">
+                <ol style="margin-left:16px;display:grid;gap:4px;">
+                  <li>Clone the repository to an Ansible control node.</li>
+                  <li>Adjust group vars and inventory to match your environment.</li>
+                  <li>Run <code>ansible-playbook site.yml -i inventory</code>.</li>
+                  <li>Review Ansible output and verify server state.</li>
+                </ol>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const buttons=document.querySelectorAll(".tab-btn");
+    const panels=document.querySelectorAll(".tab-panel");
+    buttons.forEach(b=>{
+      b.addEventListener("click",()=>{
+        const id=b.getAttribute("data-tab");
+        buttons.forEach(x=>x.classList.remove("active"));
+        panels.forEach(p=>p.classList.remove("active"));
+        b.classList.add("active");
+        document.getElementById(id).classList.add("active");
+      });
+    });
+  </script>
+</body>
+</html>
